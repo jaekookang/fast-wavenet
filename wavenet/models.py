@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-from layers import (_causal_linear, _output_linear, conv1d,
+from .layers import (_causal_linear, _output_linear, conv1d,
                     dilated_conv1d)
 
 
@@ -23,9 +23,8 @@ class Model(object):
         self.num_hidden = num_hidden
         self.gpu_fraction = gpu_fraction
         
-        inputs = tf.placeholder(tf.float32,
-                                shape=(None, num_time_samples, num_channels))
-        targets = tf.placeholder(tf.int32, shape=(None, num_time_samples))
+        inputs = tf.compat.v1.placeholder(tf.float32, shape=(None, num_time_samples, num_channels))
+        targets = tf.compat.v1.placeholder(tf.int32, shape=(None, num_time_samples))
 
         h = inputs
         hs = []
@@ -44,15 +43,16 @@ class Model(object):
                          bias=True)
 
         costs = tf.nn.sparse_softmax_cross_entropy_with_logits(
-            outputs, targets)
-        cost = tf.reduce_mean(costs)
+            logits=outputs, labels=targets)
+        cost = tf.compat.v1.reduce_mean(costs)
 
-        train_step = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
+        train_step = tf.compat.v1.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
 
-        gpu_options = tf.GPUOptions(
-            per_process_gpu_memory_fraction=gpu_fraction)
-        sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
-        sess.run(tf.initialize_all_variables())
+#         gpu_options = tf.GPUOptions(
+#             per_process_gpu_memory_fraction=gpu_fraction)
+#         sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
+        sess = tf.compat.v1.Session()
+        sess.run(tf.compat.v1.global_variables_initializer())
 
         self.inputs = inputs
         self.targets = targets
@@ -77,10 +77,11 @@ class Model(object):
         while not terminal:
             i += 1
             cost = self._train(inputs, targets)
+            print(f'{i:%04d}, cost={cost:.5f}')
             if cost < 1e-1:
                 terminal = True
             losses.append(cost)
-            if i % 50 == 0:
+            if i % 100 == 0:
                 plt.plot(losses)
                 plt.show()
 
@@ -109,9 +110,9 @@ class Generator(object):
                 else:
                     state_size = self.model.num_hidden
                     
-                q = tf.FIFOQueue(rate,
-                                 dtypes=tf.float32,
-                                 shapes=(batch_size, state_size))
+                q = tf.queue.FIFOQueue(rate,
+                                       dtypes=tf.float32,
+                                       shapes=(batch_size, state_size))
                 init = q.enqueue_many(tf.zeros((rate, batch_size, state_size)))
 
                 state_ = q.dequeue()
