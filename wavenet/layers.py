@@ -20,7 +20,7 @@ def time_to_batch(inputs, rate):
     pad_left = width_pad - width
 
     perm = (1, 0, 2)
-    shape = (width_pad / rate, -1, num_channels) # missing dim: batch_size * rate
+    shape = (width_pad // rate, -1, num_channels) # missing dim: batch_size * rate
     padded = tf.pad(inputs, [[0, 0], [pad_left, 0], [0, 0]])
     transposed = tf.transpose(padded, perm)
     reshaped = tf.reshape(transposed, shape)
@@ -43,7 +43,7 @@ def batch_to_time(inputs, rate, crop_left=0):
     batch_size = shape[0] / rate
     width = shape[1]
     
-    out_width = tf.to_int32(width * rate)
+    out_width = tf.cast(width*rate, tf.int32)
     _, _, num_channels = inputs.get_shape().as_list()
     
     perm = (1, 0, 2)
@@ -59,7 +59,7 @@ def conv1d(inputs,
            filter_width=2,
            stride=1,
            padding='VALID',
-           data_format='NHWC',
+           data_format='NWC',
            gain=np.sqrt(2),
            activation=tf.nn.relu,
            bias=False):
@@ -86,7 +86,7 @@ def conv1d(inputs,
     stddev = gain / np.sqrt(filter_width**2 * in_channels)
     w_init = tf.random_normal_initializer(stddev=stddev)
 
-    w = tf.get_variable(name='w',
+    w = tf.compat.v1.get_variable(name='w',
                         shape=(filter_width, in_channels, out_channels),
                         initializer=w_init)
 
@@ -98,7 +98,7 @@ def conv1d(inputs,
 
     if bias:
         b_init = tf.constant_initializer(0.0)
-        b = tf.get_variable(name='b',
+        b = tf.compat.v1.get_variable(name='b',
                             shape=(out_channels, ),
                             initializer=b_init)
 
@@ -133,7 +133,7 @@ def dilated_conv1d(inputs,
       outputs: (tensor)
     '''
     assert name
-    with tf.variable_scope(name):
+    with tf.compat.v1.variable_scope(name):
         _, width, _ = inputs.get_shape().as_list()
         inputs_ = time_to_batch(inputs, rate=rate)
         outputs_ = conv1d(inputs_,
@@ -148,9 +148,9 @@ def dilated_conv1d(inputs,
         outputs = batch_to_time(outputs_, rate=rate, crop_left=diff)
 
         # Add additional shape information.
-        tensor_shape = [tf.Dimension(None),
-                        tf.Dimension(width),
-                        tf.Dimension(out_channels)]
+        tensor_shape = [tf.compat.v1.Dimension(None),
+                        tf.compat.v1.Dimension(width),
+                        tf.compat.v1.Dimension(out_channels)]
         outputs.set_shape(tf.TensorShape(tensor_shape))
 
     return outputs
