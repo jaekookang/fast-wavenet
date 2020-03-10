@@ -48,10 +48,10 @@ class Model(object):
 
         train_step = tf.compat.v1.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
 
-#         gpu_options = tf.GPUOptions(
-#             per_process_gpu_memory_fraction=gpu_fraction)
-#         sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
-        sess = tf.compat.v1.Session()
+        gpu_options = tf.GPUOptions(
+            per_process_gpu_memory_fraction=gpu_fraction)
+        sess = tf.compat.v1.Session(config=tf.ConfigProto(gpu_options=gpu_options))
+#         sess = tf.compat.v1.Session()
         sess.run(tf.compat.v1.global_variables_initializer())
 
         self.inputs = inputs
@@ -77,11 +77,11 @@ class Model(object):
         while not terminal:
             i += 1
             cost = self._train(inputs, targets)
-            print(f'{i:%04d}, cost={cost:.5f}')
             if cost < 1e-1:
                 terminal = True
             losses.append(cost)
             if i % 100 == 0:
+                print(f'{i:04d}, cost={cost:.5f}')
                 plt.plot(losses)
                 plt.show()
 
@@ -91,8 +91,8 @@ class Generator(object):
         self.model = model
         self.bins = np.linspace(-1, 1, self.model.num_classes)
 
-        inputs = tf.placeholder(tf.float32, [batch_size, input_size],
-                                name='inputs')
+        inputs = tf.compat.v1.placeholder(tf.float32, [batch_size, input_size],
+                                          name='inputs')
 
         print('Make Generator.')
 
