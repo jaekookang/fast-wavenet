@@ -1,3 +1,7 @@
+This version works on TensorFlow==1.15 both on CPU and GPU (as of 2020-03-10).
+
+---
+
 # Fast Wavenet: An efficient Wavenet generation implementation
 
 <p align="center">
