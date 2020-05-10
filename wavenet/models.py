@@ -1,8 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
+from scipy.io import wavfile
 import tensorflow as tf
-from .layers import (_causal_linear, _output_linear, conv1d,
+from layers import (_causal_linear, _output_linear, conv1d,
                     dilated_conv1d)
+from tqdm import tqdm
 
 
 class Model(object):
@@ -14,7 +17,7 @@ class Model(object):
                  num_layers=14,
                  num_hidden=128,
                  gpu_fraction=1.0):
-        
+
         self.num_time_samples = num_time_samples
         self.num_channels = num_channels
         self.num_classes = num_classes
@@ -22,9 +25,11 @@ class Model(object):
         self.num_layers = num_layers
         self.num_hidden = num_hidden
         self.gpu_fraction = gpu_fraction
-        
-        inputs = tf.compat.v1.placeholder(tf.float32, shape=(None, num_time_samples, num_channels))
-        targets = tf.compat.v1.placeholder(tf.int32, shape=(None, num_time_samples))
+
+        inputs = tf.compat.v1.placeholder(
+            tf.float32, shape=(None, num_time_samples, num_channels))
+        targets = tf.compat.v1.placeholder(
+            tf.int32, shape=(None, num_time_samples))
 
         h = inputs
         hs = []
@@ -46,12 +51,14 @@ class Model(object):
             logits=outputs, labels=targets)
         cost = tf.compat.v1.reduce_mean(costs)
 
-        train_step = tf.compat.v1.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
+        train_step = tf.compat.v1.train.AdamOptimizer(
+            learning_rate=0.001).minimize(cost)
 
-        gpu_options = tf.GPUOptions(
-            per_process_gpu_memory_fraction=gpu_fraction)
-        sess = tf.compat.v1.Session(config=tf.ConfigProto(gpu_options=gpu_options))
-#         sess = tf.compat.v1.Session()
+        # gpu_options = tf.GPUOptions(
+        #     per_process_gpu_memory_fraction=gpu_fraction)
+        # sess = tf.compat.v1.Session(
+        #     config=tf.ConfigProto(gpu_options=gpu_options))
+        sess = tf.compat.v1.Session()
         sess.run(tf.compat.v1.global_variables_initializer())
 
         self.inputs = inputs
@@ -79,11 +86,14 @@ class Model(object):
             cost = self._train(inputs, targets)
             if cost < 1e-1:
                 terminal = True
+                print('Training done')
             losses.append(cost)
+            sys.stdout.write(f'Epoch={i:04d} | Loss={cost:.5f} \r')
+            sys.stdout.flush()
             if i % 100 == 0:
-                print(f'{i:04d}, cost={cost:.5f}')
-                plt.plot(losses)
-                plt.show()
+                print(f'\n{i:04d}, cost={cost:.5f}')
+                # plt.plot(losses)
+                # plt.show()
 
 
 class Generator(object):
@@ -109,7 +119,7 @@ class Generator(object):
                     state_size = 1
                 else:
                     state_size = self.model.num_hidden
-                    
+
                 q = tf.queue.FIFOQueue(rate,
                                        dtypes=tf.float32,
                                        shapes=(batch_size, state_size))
@@ -131,16 +141,17 @@ class Generator(object):
         self.inputs = inputs
         self.init_ops = init_ops
         self.out_ops = out_ops
-        
+
         # Initialize queues.
         self.model.sess.run(self.init_ops)
 
-    def run(self, input, num_samples):
+    def run(self, input, num_samples, save_dir, srate):
         predictions = []
-        for step in range(num_samples):
+        for step in tqdm(range(num_samples), total=num_samples, ascii=True):
 
             feed_dict = {self.inputs: input}
-            output = self.model.sess.run(self.out_ops, feed_dict=feed_dict)[0] # ignore push ops
+            output = self.model.sess.run(self.out_ops, feed_dict=feed_dict)[
+                0]  # ignore push ops
             value = np.argmax(output[0, :])
 
             input = np.array(self.bins[value])[None, None]
@@ -152,7 +163,9 @@ class Generator(object):
                 plt.legend()
                 plt.xlabel('samples from start')
                 plt.ylabel('signal')
-                plt.show()
+                # plt.show()
+                plt.savefig(f'{save_dir}/generate_step={step}.png')
 
         predictions_ = np.concatenate(predictions, axis=1)
+        wavfile.write(f'{save_dir}/pred.wav', srate, predictions_)
         return predictions_
