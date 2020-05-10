@@ -14,7 +14,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 if __name__ == '__main__':
     # inputs, targets = make_batch('voice.wav')
-    inputs, targets = make_batch('jaekoo_edit.wav')
+    inputs, targets = make_batch('jaekoo.wav')
     num_time_samples = inputs.shape[1]
     num_channels = 1
     gpu_fraction = 1.0
