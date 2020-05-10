@@ -91,7 +91,7 @@ class Model(object):
             sys.stdout.write(f'Epoch={i:04d} | Loss={cost:.5f} \r')
             sys.stdout.flush()
             if i % 100 == 0:
-                print(f'\n{i:04d}, cost={cost:.5f}')
+                print(f' {i:04d}, cost={cost:.5f}')
                 # plt.plot(losses)
                 # plt.show()
 
@@ -145,7 +145,7 @@ class Generator(object):
         # Initialize queues.
         self.model.sess.run(self.init_ops)
 
-    def run(self, input, num_samples, save_dir, srate):
+    def run(self, input, num_samples, save_dir):
         predictions = []
         for step in tqdm(range(num_samples), total=num_samples, ascii=True):
 
@@ -164,8 +164,7 @@ class Generator(object):
                 plt.xlabel('samples from start')
                 plt.ylabel('signal')
                 # plt.show()
-                plt.savefig(f'{save_dir}/generate_step={step}.png')
+                # plt.savefig(f'{save_dir}/generate_step={step}.png')
 
-        predictions_ = np.concatenate(predictions, axis=1)
-        wavfile.write(f'{save_dir}/pred.wav', srate, predictions_)
+        predictions_ = np.concatenate(predictions, axis=1).squeeze()
         return predictions_
