@@ -4,6 +4,8 @@ from IPython.display import Audio
 from utils import make_batch
 from models import Model, Generator
 import tensorflow as tf
+from scipy.io import wavfile
+import numpy as np
 
 tf.compat.v1.disable_eager_execution()
 
@@ -11,7 +13,8 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
 if __name__ == '__main__':
-    inputs, targets = make_batch('../assets/voice.wav')
+    # inputs, targets = make_batch('voice.wav')
+    inputs, targets = make_batch('jaekoo_edit.wav')
     num_time_samples = inputs.shape[1]
     num_channels = 1
     gpu_fraction = 1.0
@@ -25,8 +28,8 @@ if __name__ == '__main__':
     try:
         tic = time()
         model.train(inputs, targets)
-        toc = time()
     except:
+        toc = time()
         print(' +++++ Stopped +++++ ')
     finally:
         print('Training took {} seconds.'.format(toc-tic))
@@ -37,6 +40,9 @@ if __name__ == '__main__':
         input_ = inputs[:, 0:1, 0]
 
         tic = time()
-        predictions = generator.run(input_, 32000, './', 44100)
+        predictions = generator.run(input_, 44100, './')
         toc = time()
         print('Generating took {} seconds.'.format(toc-tic))
+
+        # np.save('pred.npy', predictions)
+        wavfile.write('pred.wav', 44100, predictions)
